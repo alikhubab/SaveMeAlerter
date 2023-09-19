@@ -26,6 +26,12 @@ class SpeechRecognitionService: Service() {
         super.onCreate()
         speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this)
 
+        val recognizerIntent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+        recognizerIntent.putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true);
+        recognizerIntent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "en-US");
+        recognizerIntent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 30000);
+
+
         speechRecognizer.setRecognitionListener(object : RecognitionListener {
             override fun onReadyForSpeech(params: Bundle?) {
                 Log.e(TAG, "onReadyForSpeech")
@@ -35,7 +41,7 @@ class SpeechRecognitionService: Service() {
 
             }
             override fun onRmsChanged(rmsdB: Float) {
-                Log.e(TAG, "onRmsChanged")
+//                Log.e(TAG, "onRmsChanged")
 
             }
             override fun onBufferReceived(p0: ByteArray?) {
@@ -44,7 +50,12 @@ class SpeechRecognitionService: Service() {
             }
 
             override fun onPartialResults(partialResults: Bundle?) {
-                Log.e(TAG, "onPartialResults")
+                val recognizedWords = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                if (!recognizedWords.isNullOrEmpty()) {
+                    val recognizedText = recognizedWords[0]
+                    Log.i(TAG, "onPartialResults: $recognizedText")
+                    // Process or use the recognized text as needed.
+                }
 
             }
 
@@ -57,6 +68,7 @@ class SpeechRecognitionService: Service() {
                     Log.i(TAG, "onResults: $recognizedText")
                     // Process or use the recognized text as needed.
                 }
+                speechRecognizer.startListening(recognizerIntent)
                 // Handle speech recognition results here.
             }
             override fun onEndOfSpeech() {
@@ -64,6 +76,7 @@ class SpeechRecognitionService: Service() {
 
             }
             override fun onError(error: Int) {
+                speechRecognizer.startListening(recognizerIntent)
                 Log.e(TAG, "onError $error")
 
             }
@@ -72,10 +85,6 @@ class SpeechRecognitionService: Service() {
 
             }
         })
-
-        val recognizerIntent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
-        recognizerIntent.putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true);
-        recognizerIntent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "en-US");
 
         speechRecognizer.startListening(recognizerIntent)
     }

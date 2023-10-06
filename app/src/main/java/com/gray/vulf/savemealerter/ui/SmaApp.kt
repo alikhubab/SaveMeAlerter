@@ -203,10 +203,9 @@ fun SmaApp(
                         modifier = Modifier
                             .height(200.dp)
                             .padding(start = 20.dp, end = 20.dp, top = 15.dp),
-
-
+                        
                         label = "Message you want to send!",
-                        text = "",
+                        text = message,
                         shape = MaterialTheme.shapes.large,
                         onTextChange = {
                             message = it

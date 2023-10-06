@@ -1,5 +1,6 @@
 package com.gray.vulf.savemealerter
 
+import android.Manifest.permission.READ_CONTACTS
 import android.Manifest.permission.RECORD_AUDIO
 import android.Manifest.permission.SEND_SMS
 import android.content.Intent
@@ -39,6 +40,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
 import androidx.lifecycle.lifecycleScope
 import com.gray.vulf.savemealerter.ui.SmaApp
+import com.gray.vulf.savemealerter.ui.SmsContacts
 import com.gray.vulf.savemealerter.ui.theme.SaveMeAlerterTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -61,7 +63,7 @@ class MainActivity : ComponentActivity() {
 
 //        val intent = Intent(this, SpeechRecognitionService::class.java)
 //        applicationContext.startForegroundService(intent)
-        ActivityCompat.requestPermissions(this, arrayOf(RECORD_AUDIO, SEND_SMS), 12);
+        ActivityCompat.requestPermissions(this, arrayOf(RECORD_AUDIO, SEND_SMS, READ_CONTACTS), 12);
 //        startService(intent)
 
 //        val accessibilityIntent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).apply {
@@ -95,7 +97,8 @@ class MainActivity : ComponentActivity() {
 //                    }
 //                    StartButton(name = "Save Me", modifier = Modifier.size(Dp(32F))) {handleStartListening()}
 //
-                SmaApp()
+//                SmaApp()
+                SmsContacts()
             }
         }
     }

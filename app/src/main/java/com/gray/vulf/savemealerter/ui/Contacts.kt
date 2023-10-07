@@ -13,9 +13,11 @@ import android.os.Build
 import android.util.Log
 import android.widget.Toast
 import androidx.annotation.RequiresApi
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -27,13 +29,23 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabPosition
+import androidx.compose.material3.TabRow
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
@@ -57,6 +69,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import androidx.core.app.ActivityCompat
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -68,28 +81,84 @@ import com.gray.vulf.savemealerter.ui.theme.SaveMeAlerterTheme
 
 
 @OptIn(ExperimentalMaterial3Api::class)
+@Preview
 @Composable
-fun SmaApp(
+fun Contacts(
+    onNavigateBack: () -> Unit
 ) {
     val navController = rememberNavController()
     val context = LocalContext.current
+    var tabState by remember { mutableStateOf(0) }
+
+    Log.e("Contacts>>", navController.currentDestination.toString())
+    navController.currentDestination
+
+    val indicator = @Composable { tabPositions: List<TabPosition> ->
+        FancyIndicator(
+            MaterialTheme.colorScheme.primary,
+            Modifier.tabIndicatorOffset(tabPositions[tabState])
+        )
+    }
+
+    Column {
+        IconButton(
+            onClick = { onNavigateBack() },
+            modifier = Modifier.padding(16.dp),
+        ) {
+            Icon(
+                Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back",
+                tint = MaterialTheme.colorScheme.primary,
 
 
-    // Get a list of currently running services
-
-    NavHost(navController = navController, startDestination = "home") {
-        composable("home") {
-            Home(onNavigateToContacts = {
-                navController.navigate("contacts")
-            })
+                )
         }
-        composable("contacts") {
-            Contacts(onNavigateBack = {
-                navController.popBackStack()
-            })
+        PrimaryTabRow(
+            selectedTabIndex = tabState,
+            divider = {},
+            indicator = indicator,
+            modifier = Modifier.padding(horizontal = 48.dp, vertical = 12.dp)
+
+        ) {
+            Tab(selected = tabState == 0,
+                modifier = Modifier.padding(vertical = 16.dp),
+
+                onClick = { tabState = 0 }) {
+                Text(
+                    text = "Contacts",
+                    color = if (tabState == 0) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary
+                )
+            }
+            Tab(selected = tabState == 1,
+                modifier = Modifier.padding(vertical = 16.dp),
+                onClick = { tabState = 1 }) {
+                Text(
+                    text = "Emails",
+                    color = if (tabState == 1) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary
+                )
+            }
+        }
+        when (tabState) {
+            0 -> SmsContacts()
+            1 -> EmailContacts()
         }
     }
 
+}
+
+@Composable
+@Preview
+fun FancyIndicator(
+    color: Color = MaterialTheme.colorScheme.primary,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier
+            .padding(5.dp)
+            .fillMaxWidth()
+            .fillMaxHeight()
+            .background(color = color, shape = MaterialTheme.shapes.small)
+            .zIndex(-1f)
+    )
 }
 
 

@@ -39,6 +39,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
 import androidx.lifecycle.lifecycleScope
+import com.gray.vulf.savemealerter.ui.EmailContacts
 import com.gray.vulf.savemealerter.ui.SmaApp
 import com.gray.vulf.savemealerter.ui.SmsContacts
 import com.gray.vulf.savemealerter.ui.theme.SaveMeAlerterTheme
@@ -60,45 +61,12 @@ class MainActivity : ComponentActivity() {
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-//        val intent = Intent(this, SpeechRecognitionService::class.java)
-//        applicationContext.startForegroundService(intent)
         ActivityCompat.requestPermissions(this, arrayOf(RECORD_AUDIO, SEND_SMS, READ_CONTACTS), 12);
-//        startService(intent)
 
-//        val accessibilityIntent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).apply {
-//            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-//        }
-
-//        startActivity(accessibilityIntent)
-
-        fun handleStartListening() {
-            try {
-//                            stopService(intent)
-                startService(intent)
-            } catch (e: IllegalArgumentException) {
-                Log.e(TAG, e.message.toString())
-            }
-//                        sendMail()
-//                        openWhatsApp()
-//                        sendWhatsappMessage("Hello world", arrayOf("923475932761"))
-        }
-
-//        var message by remember {
-//            mutableStateOf("Save Me!")
-//        }
 
         setContent {
             SaveMeAlerterTheme {
-//                Surface(
-//                    modifier = Modifier.fillMaxSize(),
-//                    color = MaterialTheme.colorScheme.background
-//                ) {
-//                    }
-//                    StartButton(name = "Save Me", modifier = Modifier.size(Dp(32F))) {handleStartListening()}
-//
-//                SmaApp()
-                SmsContacts()
+                SmaApp()
             }
         }
     }

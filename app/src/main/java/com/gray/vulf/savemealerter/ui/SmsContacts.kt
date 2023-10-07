@@ -26,9 +26,12 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -46,6 +49,7 @@ import androidx.core.app.ActivityCompat.startActivityForResult
 import com.gray.vulf.savemealerter.R
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
@@ -175,31 +179,32 @@ fun SmsContacts() {
 //        contactPicker.pickContact()
     }
 
-
-    Box {
-
+    Scaffold(
+        floatingActionButton = {
+            ExtendedFloatingActionButton(
+                text = { Text("Add Contact") },
+                icon = { Icon(Icons.Filled.Add, contentDescription = "") },
+                onClick = {
+                    handleContactPick()
+                }
+            )
+        }
+    ) { contentPadding ->
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.secondary)
-                .padding(32.dp)
+                .background(MaterialTheme.colorScheme.background)
+                .padding(16.dp)
 
         ) {
             itemsIndexed(contacts) { _, item ->
                 ContactItem(name = item.name, phone = item.phone)
-                Spacer(modifier = Modifier.size(8.dp))
-
+                Spacer(
+                    modifier = Modifier
+                        .size(8.dp)
+                        .padding(contentPadding)
+                )
             }
-        }
-
-        FloatingActionButton(
-            onClick = { handleContactPick() },
-            modifier = Modifier
-                .padding(all = 32.dp)
-                .align(alignment = Alignment.BottomEnd)
-        ) {
-            Icon(imageVector = Icons.Filled.Add, contentDescription = "Add")
-
         }
     }
 
@@ -211,7 +216,7 @@ fun ContactItem(name: String = "", phone: String = "") {
     Row(
         modifier = Modifier
             .background(
-                color = MaterialTheme.colorScheme.surface,
+                color = MaterialTheme.colorScheme.surfaceVariant,
                 shape = MaterialTheme.shapes.medium
             )
             .padding(12.dp)
@@ -234,41 +239,6 @@ fun ContactItem(name: String = "", phone: String = "") {
 }
 
 
-class ContactPicker(activity: Activity) {
-    private val _contactName = MutableStateFlow("")
-    val contactName: StateFlow<String> = _contactName
-
-    private val activityResultLauncher = (activity as ComponentActivity).registerForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        if (result.resultCode == Activity.RESULT_OK) {
-            val data: Intent? = result.data
-            data?.data?.let { contactUri ->
-                val projection = arrayOf(ContactsContract.Contacts.DISPLAY_NAME)
-                val cursor = activity.contentResolver.query(
-                    contactUri,
-                    projection,
-                    null,
-                    null,
-                    null
-                )
-                cursor?.use {
-                    if (it.moveToFirst()) {
-                        val nameColumnIndex =
-                            it.getColumnIndex(ContactsContract.Contacts.DISPLAY_NAME)
-                        val name = it.getString(nameColumnIndex)
-                        _contactName.value = name
-                    }
-                }
-            }
-        }
-    }
-
-    fun pickContact() {
-        val intent = Intent(Intent.ACTION_PICK, ContactsContract.Contacts.CONTENT_URI)
-        activityResultLauncher.launch(intent)
-    }
-}
 
 
 

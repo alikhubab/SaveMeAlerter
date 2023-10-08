@@ -1,5 +1,7 @@
 package com.gray.vulf.savemealerter
 
+import android.Manifest.permission.ACCESS_COARSE_LOCATION
+import android.Manifest.permission.ACCESS_FINE_LOCATION
 import android.Manifest.permission.READ_CONTACTS
 import android.Manifest.permission.RECORD_AUDIO
 import android.Manifest.permission.SEND_SMS
@@ -58,10 +60,19 @@ import javax.mail.internet.MimeMessage
 
 
 class MainActivity : ComponentActivity() {
-    @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        ActivityCompat.requestPermissions(this, arrayOf(RECORD_AUDIO, SEND_SMS, READ_CONTACTS), 12);
+        ActivityCompat.requestPermissions(
+            this,
+            arrayOf(
+                RECORD_AUDIO,
+                SEND_SMS,
+                READ_CONTACTS,
+                ACCESS_COARSE_LOCATION,
+                ACCESS_FINE_LOCATION,
+            ),
+            12
+        );
 
 
         setContent {

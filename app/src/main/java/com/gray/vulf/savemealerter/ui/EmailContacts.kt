@@ -50,6 +50,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.gray.vulf.savemealerter.R
+import com.gray.vulf.savemealerter.data.models.EmailContact
+import com.gray.vulf.savemealerter.data.models.EmailPassword
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
@@ -110,17 +112,6 @@ fun EmailContacts() {
 
     val sharedPreferences = context.getSharedPreferences("SmaPrefs", Context.MODE_PRIVATE)
 
-    @Serializable
-    data class EmailContact(
-        val name: String,
-        val email: String
-    )
-
-    @Serializable
-    data class EmailPassword(
-        val email: String,
-        val password: String
-    )
 
     //    val contactPicker = ContactPicker(activity = context as Activity);
     var emailContacts by remember {
@@ -151,14 +142,14 @@ fun EmailContacts() {
 
     fun saveContactListToSharedPrefs(emailContacts: List<EmailContact>) {
         val sharedPreferences = context.getSharedPreferences("SmaPrefs", Context.MODE_PRIVATE)
-        val jsonContacts = Json.encodeToString(emailContacts)
+        val jsonContacts = Json.encodeToString<List<EmailContact>>(emailContacts)
         Log.i("serialized>>", jsonContacts)
         sharedPreferences.edit().putString("emailContacts", jsonContacts).apply()
     }
 
     fun saveSenderEmailPasswordToSharedPrefs(emailPassword: EmailPassword) {
         val sharedPreferences = context.getSharedPreferences("SmaPrefs", Context.MODE_PRIVATE)
-        val jsonEp = Json.encodeToString(emailPassword)
+        val jsonEp = Json.encodeToString<EmailPassword>(emailPassword)
         sharedPreferences.edit().putString("senderEmailPassword", jsonEp).apply()
     }
 
@@ -179,7 +170,12 @@ fun EmailContacts() {
                 text = { Text("Add Email") },
                 icon = { Icon(Icons.Filled.Add, contentDescription = "") },
                 onClick = {
-                    showBottomSheet = true
+                    if (emailContacts.size >= 5) {
+                        Toast.makeText(context, "You can only add five emails.", Toast.LENGTH_LONG)
+                            .show()
+                    } else {
+                        showBottomSheet = true
+                    }
                 }
             )
         },

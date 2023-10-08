@@ -7,6 +7,7 @@ import android.content.Intent
 import android.provider.ContactsContract
 import android.util.JsonWriter
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -47,6 +48,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat.startActivityForResult
 import com.gray.vulf.savemealerter.R
+import com.gray.vulf.savemealerter.data.models.PhoneContact
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -71,20 +73,15 @@ fun SmsContacts() {
 
     val sharedPreferences = context.getSharedPreferences("SmaPrefs", Context.MODE_PRIVATE)
 
-    @Serializable
-    data class Contact(
-        val name: String,
-        val phone: String
-    )
 
     //    val contactPicker = ContactPicker(activity = context as Activity);
     var contacts by remember {
-        var cnl: MutableList<Contact>
+        var cnl: MutableList<PhoneContact>
         val jsonContacts = sharedPreferences.getString("smsContacts", "");
         cnl = if (jsonContacts.isNullOrBlank()) {
             mutableListOf()
         } else {
-            Json.decodeFromString<MutableList<Contact>>(jsonContacts)
+            Json.decodeFromString<MutableList<PhoneContact>>(jsonContacts)
         }
 
         mutableStateOf(
@@ -93,7 +90,7 @@ fun SmsContacts() {
     }
 
 
-    fun saveContactListToSharedPrefs(contacts: List<Contact>) {
+    fun saveContactListToSharedPrefs(contacts: List<PhoneContact>) {
         val sharedPreferences = context.getSharedPreferences("SmaPrefs", Context.MODE_PRIVATE)
         val jsonContacts = Json.encodeToString(contacts)
         Log.i("serialized>>", jsonContacts)
@@ -155,7 +152,7 @@ fun SmsContacts() {
                                     Log.i("Number", "$contactNumber")
                                 }
                                 if (!contactNumber.isNullOrBlank()) {
-                                    contacts = (contacts + Contact(
+                                    contacts = (contacts + PhoneContact(
                                         name = contactName,
                                         phone = contactNumber
                                     )).toMutableList()
@@ -185,7 +182,16 @@ fun SmsContacts() {
                 text = { Text("Add Contact") },
                 icon = { Icon(Icons.Filled.Add, contentDescription = "") },
                 onClick = {
-                    handleContactPick()
+                    if (contacts.size >= 5) {
+                        Toast.makeText(
+                            context,
+                            "You can only add five contacts.",
+                            Toast.LENGTH_LONG
+                        )
+                            .show()
+                    } else {
+                        handleContactPick()
+                    }
                 }
             )
         }

@@ -2,9 +2,14 @@ package com.gray.vulf.savemealerter
 
 //import android.speech.RecognitionResult
 
+import android.Manifest
+import android.annotation.SuppressLint
 import android.app.*
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.location.Geocoder
+import android.location.Location
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -16,12 +21,32 @@ import android.telephony.SmsManager
 import android.telephony.SubscriptionManager
 import android.util.Log
 import androidx.annotation.RequiresApi
+import androidx.compose.runtime.mutableStateOf
+import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
+import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.LocationRequest
+import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.Priority
+import com.google.android.gms.tasks.CancellationToken
+import com.google.android.gms.tasks.CancellationTokenSource
+import com.google.android.gms.tasks.Continuation
+import com.google.android.gms.tasks.OnTokenCanceledListener
+import com.gray.vulf.savemealerter.data.models.EmailContact
+import com.gray.vulf.savemealerter.data.models.EmailPassword
+import com.gray.vulf.savemealerter.data.models.PhoneContact
+import com.gray.vulf.savemealerter.data.models.SaveMeMessage
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
 import java.net.URLEncoder
+import java.util.Locale
 import java.util.Properties
 import javax.mail.Address
 import javax.mail.Authenticator
@@ -32,22 +57,23 @@ import javax.mail.Session
 import javax.mail.Transport
 import javax.mail.internet.InternetAddress
 import javax.mail.internet.MimeMessage
+import kotlin.coroutines.resume
+import kotlin.coroutines.suspendCoroutine
 
 
 const val TAG = "SpeechRecognitionService";
 
 class SpeechRecognitionService : Service() {
     private lateinit var speechRecognizer: SpeechRecognizer
+    private lateinit var fusedLocationClient: FusedLocationProviderClient
+
+    private val job = SupervisorJob()
+    private val scope = CoroutineScope(Dispatchers.IO + job)
 
     private val CHANNEL_ID = "SaveMeAlerterChannel"
     private val NOTIFICATION_ID = 1
 
-    private fun sendMail(targetEmail: String, message: String) {
-        if (targetEmail.isBlank()) return
-
-        val username = "alikhubab6@gmail.com" // Your email address
-        val password = "okhwkeckgfdpuunk" // Your email password
-
+    private fun sendMail(targetEmails: List<EmailContact>, sender: EmailPassword, message: String) {
 
         val props = Properties()
         props["mail.smtp.auth"] = "true"
@@ -58,16 +84,16 @@ class SpeechRecognitionService : Service() {
         try {
             val session = Session.getInstance(props, object : Authenticator() {
                 override fun getPasswordAuthentication(): PasswordAuthentication {
-                    return PasswordAuthentication(username, password)
+                    return PasswordAuthentication(sender.email, sender.password)
                 }
             })
 
             val mimeMessage = MimeMessage(session)
-            mimeMessage.setFrom(InternetAddress(username))
-            mimeMessage.setRecipients(
-                Message.RecipientType.TO,
-                InternetAddress.parse(targetEmail)
-            )
+            mimeMessage.setFrom(InternetAddress(sender.email))
+
+            val recipientAddresses = targetEmails.map { InternetAddress(it.email) }.toTypedArray()
+            mimeMessage.setRecipients(Message.RecipientType.TO, recipientAddresses)
+
             mimeMessage.subject = "Emergency Save"
             mimeMessage.setText(message)
 
@@ -83,77 +109,169 @@ class SpeechRecognitionService : Service() {
     }
 
 
-    private fun sendMessage(targetPhone: String, message: String) {
-        if (targetPhone.isBlank()) return
+    private fun sendMessage(targetPhones: List<PhoneContact>, message: String) {
         val subscriptionId = SubscriptionManager.getDefaultSmsSubscriptionId();
         Log.i(TAG, "sendMessage>>subscriptions $subscriptionId")
         val smsManager = SmsManager.getSmsManagerForSubscriptionId(subscriptionId);
         try {
-            smsManager.sendTextMessage(targetPhone, null, message, null, null)
-//            showNotification("Save Me SMS sent", "Save Me SMS sent to $targetPhone")
-
+            targetPhones.map {
+                if (it.phone.isBlank()) return
+                smsManager.sendTextMessage(it.phone, null, message, null, null)
+            }
         } catch (e: Exception) {
             Log.e(TAG, "Error sending message>> $e")
         }
         Log.i(TAG, "sendMessage>>subscriptions $smsManager")
     }
 
+    private suspend fun getAddress(latitude: Double, longitude: Double): String =
+        withContext(Dispatchers.IO) {
 
-    private fun sendWhatsappMessage(message: String, mobileNumbers: Array<String>) {
-        try {
-            val packageManager = applicationContext.packageManager
-            if (mobileNumbers.isNotEmpty()) {
-                mobileNumbers.forEach {
-                    val uri = "https://api.whatsapp.com?phone=$it&text=${
-                        URLEncoder.encode(
-                            message,
-                            "utf-8"
-                        )
-                    }"
-                    val whatsappIntent = Intent(Intent.ACTION_VIEW)
 
-                    with(whatsappIntent) {
-                        setPackage("com.whatsapp")
-                        data = Uri.parse(uri)
-                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    }
-
-                    if (whatsappIntent.resolveActivity(packageManager) != null) {
-                        applicationContext.startActivity(whatsappIntent)
-                        Thread.sleep(10000)
-
+            return@withContext suspendCoroutine<String> { continuation ->
+                val geocoder = Geocoder(this@SpeechRecognitionService, Locale.getDefault())
+                try {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        geocoder.getFromLocation(latitude, longitude, 1) {
+                            if (it.isEmpty())
+                                continuation.resume("")
+                            else
+                                continuation.resume(it[0].getAddressLine(0))
+                        }
                     } else {
-                        Log.e(TAG, "Whatsapp not installed")
+                        geocoder.getFromLocation(latitude, longitude, 1).let {
+                            if (it.isNullOrEmpty())
+                                continuation.resume("")
+                            else
+                                continuation.resume(it[0].getAddressLine(0))
+                        }
                     }
+                } catch (e: Exception) {
+                    continuation.resume("")
                 }
             }
-        } catch (e: Exception) {
-            Log.e(TAG, e.message.toString())
         }
 
+    private fun askForHelp() {
+        val message: SaveMeMessage = getSaveMeMessage()
+        Log.e("askForHelp>>message", message.message)
+        Log.e("askForHelp>>senderEmail", message.sender.email)
+        Log.e("askForHelp>>firstEmailTarget", message.mailTargets.toString())
+        Log.e("askForHelp>>firstPhoneTarget", message.phoneTargets.toString())
+
+        scope.launch {
+            val location = getLocation()
+            Log.i("askForHelp>>Location>>", location?.latitude.toString())
+            var address = ""
+            if (location != null)
+                address = getAddress(location.latitude, location.longitude)
+            Log.i("askForHelp>>address>>", address)
+            val msg =
+                "${message.message} \n Address: ${address} \n Coordinates: ${location?.latitude} , ${location?.longitude}"
+            sendMessage(message.phoneTargets, msg)
+            Log.e("Mesage is>>>>>>>>>>>>>>>>>", msg)
+            sendMail(message.mailTargets, message.sender, msg)
+        }
     }
 
 
-    private fun getSaveMeData(): SaveMeData {
+    private fun hasPermission(): Boolean {
+        return !(ContextCompat.checkSelfPermission(
+            this,
+            Manifest.permission.ACCESS_FINE_LOCATION
+        ) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(
+            this,
+            Manifest.permission.ACCESS_COARSE_LOCATION
+        ) != PackageManager.PERMISSION_GRANTED)
+    }
+
+    @SuppressLint("MissingPermission")
+    private suspend fun getLocation(): Location? = withContext(Dispatchers.IO) {
+        suspendCoroutine { continuation ->
+            if (hasPermission()) {
+                fusedLocationClient =
+                    LocationServices.getFusedLocationProviderClient(this@SpeechRecognitionService)
+
+                fusedLocationClient.getCurrentLocation(
+                    Priority.PRIORITY_HIGH_ACCURACY,
+                    object : CancellationToken() {
+                        override fun onCanceledRequested(p0: OnTokenCanceledListener) =
+                            CancellationTokenSource().token
+
+                        override fun isCancellationRequested() = false
+                    }
+                ).addOnSuccessListener {
+                    continuation.resume(it)
+                }
+            } else {
+                continuation.resume(null)
+            }
+        }
+    }
+
+
+    private inline fun <reified K> getContactsListFromStorage(contactType: String): List<K> {
         val sharedPreferences = getSharedPreferences("SmaPrefs", Context.MODE_PRIVATE)
-        return object : SaveMeData {
-            override val message = sharedPreferences.getString("message", "") ?: "Save Me"
-            override val targetPhone = sharedPreferences.getString("phone", "") ?: ""
-            override val targetEmail = sharedPreferences.getString("email", "") ?: ""
+        val contacts: List<K>
+        val jsonContacts = sharedPreferences.getString(contactType, "");
+
+        contacts = if (jsonContacts.isNullOrBlank()) {
+            listOf()
+        } else {
+            Json.decodeFromString<List<K>>(jsonContacts)
+        }
+        return contacts
+    }
+
+
+    private inline fun <reified K> getContactFromStorage(contactType: String): K? {
+        val sharedPreferences = getSharedPreferences("SmaPrefs", Context.MODE_PRIVATE)
+        val contact: K?
+        val jsonContact = sharedPreferences.getString(contactType, "")
+        contact = if (jsonContact.isNullOrBlank()) {
+            null
+        } else {
+            Json.decodeFromString<K>(jsonContact)
+        }
+        return contact
+    }
+
+    private fun getMessageFromStorage(): String {
+        val sharedPreferences = getSharedPreferences("message", Context.MODE_PRIVATE)
+        return sharedPreferences.getString("message", "").let {
+            if (it.isNullOrBlank())
+                return@let "Save Me"
+            it
         }
     }
 
-    interface SaveMeData {
-        val message: String
-        val targetPhone: String
-        val targetEmail: String
+    private fun getSaveMeMessage(): SaveMeMessage {
+        val phoneContacts = getContactsListFromStorage<PhoneContact>("smsContacts")
+        val emailContacts = getContactsListFromStorage<EmailContact>("emailContacts")
+        val senderEmailPassword =
+            getContactFromStorage<EmailPassword>("senderEmailPassword").let {
+                if (it == null)
+                    return@let EmailPassword(email = "alikhubab6@gmail.com", password = "123")
+                it
+            }
+        val message = getMessageFromStorage()
+
+        return SaveMeMessage(
+            sender = senderEmailPassword,
+            message = message,
+            mailTargets = emailContacts,
+            phoneTargets = phoneContacts
+        )
     }
+
 
     override fun onCreate() {
         super.onCreate()
+//        askForHelp()
 
 
         speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this)
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
         val recognizerIntent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
         recognizerIntent.putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true);
@@ -190,9 +308,7 @@ class SpeechRecognitionService : Service() {
                     val recognizedText = recognizedWords[0]
                     Log.i(TAG, "onPartialResults: $recognizedText")
                     if (recognizedText.lowercase().contains("save me")) {
-                        val saveMeData = getSaveMeData();
-                        sendMessage(saveMeData.targetPhone, saveMeData.message)
-                        sendMail(saveMeData.targetEmail, saveMeData.message)
+                        askForHelp()
                     }
 //                     Process or use the recognized text as needed.
                 }
@@ -233,7 +349,11 @@ class SpeechRecognitionService : Service() {
             }
         })
 
-        speechRecognizer.startListening(recognizerIntent)
+        try {
+            speechRecognizer.startListening(recognizerIntent)
+        } catch (e: Exception) {
+
+        }
     }
 
     @RequiresApi(Build.VERSION_CODES.O)
@@ -317,7 +437,12 @@ class SpeechRecognitionService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
-        speechRecognizer.destroy()
+        try {
+            speechRecognizer.destroy()
+        } catch (e: Exception) {
+            Log.w("SpeechRecognitionService>>OnDestroy>>", "Couldn't stop service")
+        }
+        job.cancel()
     }
 
     override fun onBind(intent: Intent?): IBinder? {

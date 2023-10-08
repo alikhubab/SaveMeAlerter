@@ -70,6 +70,9 @@ const val TAG = "SmsContacts"
 @Composable
 fun SmsContacts() {
     val context = LocalContext.current;
+    var openDeleteAlertDialog = remember {
+        mutableStateOf(false)
+    }
 
     val sharedPreferences = context.getSharedPreferences("SmaPrefs", Context.MODE_PRIVATE)
 
@@ -169,11 +172,7 @@ fun SmsContacts() {
 
 
     fun handleContactPick() {
-
-
-//        startActivityForResult(context as Activity, pickContact, 1, null);
         contactsLauncher.launch()
-//        contactPicker.pickContact()
     }
 
     Scaffold(
@@ -196,6 +195,18 @@ fun SmsContacts() {
             )
         }
     ) { contentPadding ->
+        when {
+            openDeleteAlertDialog.value -> {
+                DeleteDialog(
+                    onDismissRequest = {
+                        openDeleteAlertDialog.value = false
+                    },
+                    onConfirmation = {
+                        openDeleteAlertDialog.value = false
+                    }
+                )
+            }
+        }
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
@@ -203,8 +214,10 @@ fun SmsContacts() {
                 .padding(16.dp)
 
         ) {
-            itemsIndexed(contacts) { _, item ->
-                ContactItem(name = item.name, phone = item.phone)
+            itemsIndexed(contacts) { index, item ->
+                ContactItem(name = item.name, phone = item.phone, id = index) {
+                    openDeleteAlertDialog.value = true
+                }
                 Spacer(
                     modifier = Modifier
                         .size(8.dp)
@@ -216,33 +229,6 @@ fun SmsContacts() {
 
 }
 
-@Preview(showBackground = true)
-@Composable
-fun ContactItem(name: String = "", phone: String = "") {
-    Row(
-        modifier = Modifier
-            .background(
-                color = MaterialTheme.colorScheme.surfaceVariant,
-                shape = MaterialTheme.shapes.medium
-            )
-            .padding(12.dp)
-            .fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Image(
-            painter = painterResource(id = R.drawable.ic_launcher_background),
-            contentDescription = "Profile Image",
-            modifier = Modifier
-                .size(40.dp)
-                .clip(MaterialTheme.shapes.extraLarge)
-        )
-        Spacer(modifier = Modifier.size(8.dp))
-        Column {
-            Text(text = name, style = MaterialTheme.typography.titleMedium)
-            Text(text = phone, style = MaterialTheme.typography.bodyMedium)
-        }
-    }
-}
 
 
 

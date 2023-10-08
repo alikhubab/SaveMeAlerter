@@ -101,6 +101,9 @@ fun EmailContacts() {
     val sheetState = rememberModalBottomSheetState()
     val scope = rememberCoroutineScope()
     var showBottomSheet by remember { mutableStateOf(false) }
+    var openDeleteAlertDialog = remember {
+        mutableStateOf(false)
+    }
 
     val senderEmailInputSheetState = rememberModalBottomSheetState()
     var showSenderEmailInputBottomSheet by remember {
@@ -181,6 +184,20 @@ fun EmailContacts() {
         },
 
         ) { contentPadding ->
+
+        when {
+            openDeleteAlertDialog.value -> {
+                DeleteDialog(
+                    onDismissRequest = {
+                        openDeleteAlertDialog.value = false
+                    },
+                    onConfirmation = {
+                        openDeleteAlertDialog.value = false
+                    }
+                )
+            }
+        }
+
         Column {
             SenderEmailCard(email = senderEmailPassword.email) {
                 showSenderEmailInputBottomSheet = true
@@ -193,8 +210,10 @@ fun EmailContacts() {
 
 
             ) {
-                itemsIndexed(emailContacts) { _, item ->
-                    EmailItem(name = item.name, email = item.email)
+                itemsIndexed(emailContacts) { index, item ->
+                    EmailItem(name = item.name, email = item.email, id = index) {
+                        openDeleteAlertDialog.value = true
+                    }
                     Spacer(modifier = Modifier.size(8.dp))
                 }
             }
@@ -272,191 +291,6 @@ fun EmailContacts() {
                     }
                 }
             }
-        }
-    }
-}
-
-
-@Composable
-fun SenderEmailCard(email: String, onEdit: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 32.dp, vertical = 8.dp)
-            .background(
-                color = MaterialTheme.colorScheme.surfaceDim,
-                shape = MaterialTheme.shapes.small
-            ),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.Bottom
-    ) {
-        Column(
-            modifier = Modifier
-                .padding(16.dp)
-                .fillMaxWidth(0.8f)
-        ) {
-            Text(
-                text = "Sender Email and Password",
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight(700)
-            )
-            Text(
-                text = email,
-                style = MaterialTheme.typography.bodySmall,
-                fontWeight = FontWeight(500)
-            )
-            Text(
-                text = "********************",
-                style = MaterialTheme.typography.bodySmall,
-                fontWeight = FontWeight(500)
-
-
-            )
-            Text(
-                text = "This requires an App Password for Gmail. Please visit www.google.com/app-passwords to create one.",
-                style = MaterialTheme.typography.bodySmall,
-                fontWeight = FontWeight(300)
-
-            )
-        }
-        IconButton(
-            onClick = { onEdit() },
-            modifier = Modifier
-                .padding(16.dp)
-                .background(
-                    color = MaterialTheme.colorScheme.primary,
-                    shape = MaterialTheme.shapes.small
-                )
-        ) {
-            Icon(
-                Icons.Filled.Create, contentDescription = "Back",
-                tint = MaterialTheme.colorScheme.onPrimary,
-            )
-        }
-
-
-    }
-
-}
-
-
-@Preview(showBackground = true)
-@Composable
-fun EmailInputForm(onSubmit: (email: String, name: String) -> Unit = { e, n -> }) {
-    var email by remember {
-        mutableStateOf("")
-    }
-    var name by remember {
-        mutableStateOf("")
-    }
-
-
-
-    Column(modifier = Modifier.padding(32.dp)) {
-        Text(
-            text = "Add an email",
-            style = MaterialTheme.typography.titleSmall,
-        )
-        Text(
-            text = "This could be your relative, friend, or a family member. Someone who could help you.",
-            style = MaterialTheme.typography.bodySmall,
-            fontWeight = FontWeight(300)
-        )
-        Spacer(Modifier.size(16.dp))
-
-
-        MyTextField(
-            text = email, label = "Enter Email", onTextChange = { email = it },
-        )
-        Spacer(Modifier.size(8.dp))
-        MyTextField(text = name, label = "Enter Name", onTextChange = { name = it })
-        Spacer(Modifier.size(12.dp))
-        StartButton(
-            name = "Save",
-            onClick = {
-                onSubmit(email.trim(), name.trim())
-            },
-            backgroundColor = MaterialTheme.colorScheme.primary
-        )
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun SenderEmailInputForm(
-    currentEmail: String = "",
-    currentPassword: String = "",
-    loading: Boolean = false,
-    onSubmit: (email: String, password: String) -> Unit = { e, n -> }
-) {
-    var email by remember {
-        mutableStateOf(currentEmail)
-    }
-    var password by remember {
-        mutableStateOf(currentPassword)
-    }
-    Column(modifier = Modifier.padding(32.dp), verticalArrangement = Arrangement.Center) {
-        if (loading) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth(),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator(
-                    modifier = Modifier.width(64.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant,
-                    trackColor = MaterialTheme.colorScheme.secondary,
-                )
-            }
-            Spacer(modifier = Modifier.size(64.dp))
-        }
-        Text(
-            text = "The email from which you want to send the emergency email.",
-            style = MaterialTheme.typography.titleSmall,
-        )
-        Text(
-            text = "This requires an App Password for Gmail. Please visit www.google.com/app-passwords to create one.",
-            style = MaterialTheme.typography.bodySmall,
-            fontWeight = FontWeight(300)
-        )
-        Spacer(Modifier.size(16.dp))
-
-        MyTextField(text = email, label = "Enter Email", onTextChange = { email = it })
-        Spacer(Modifier.size(8.dp))
-        MyTextField(text = password, label = "Enter Password", onTextChange = { password = it })
-        Spacer(Modifier.size(12.dp))
-        StartButton(
-            name = "Save",
-            onClick = { if (!loading) onSubmit(email.trim(), password.trim()) },
-            backgroundColor = if (loading) MaterialTheme.colorScheme.surfaceDim else MaterialTheme.colorScheme.primary
-        )
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun EmailItem(name: String = "", email: String = "") {
-    Row(
-        modifier = Modifier
-            .background(
-                color = MaterialTheme.colorScheme.surfaceVariant,
-                shape = MaterialTheme.shapes.medium
-            )
-            .padding(12.dp)
-            .fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Image(
-            painter = painterResource(id = R.drawable.ic_launcher_background),
-            contentDescription = "Profile Image",
-            modifier = Modifier
-                .size(40.dp)
-                .clip(MaterialTheme.shapes.extraLarge)
-        )
-        Spacer(modifier = Modifier.size(8.dp))
-        Column {
-            Text(text = name, style = MaterialTheme.typography.titleMedium)
-            Text(text = email, style = MaterialTheme.typography.bodyMedium)
         }
     }
 }

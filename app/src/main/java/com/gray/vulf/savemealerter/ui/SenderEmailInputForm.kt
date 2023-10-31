@@ -65,11 +65,14 @@ fun SenderEmailInputForm(
         MyTextField(text = email, label = "Enter Email", onTextChange = { email = it })
         Spacer(Modifier.size(8.dp))
         MyTextField(text = password, label = "Enter Password", onTextChange = { password = it })
-        Spacer(Modifier.size(12.dp))
+        Spacer(Modifier.size(24.dp))
         StartButton(
             name = "Save",
             onClick = { if (!loading) onSubmit(email.trim(), password.trim()) },
             backgroundColor = if (loading) MaterialTheme.colorScheme.surfaceDim else MaterialTheme.colorScheme.primary
         )
+        Spacer(Modifier.size(48.dp))
+
+
     }
 }

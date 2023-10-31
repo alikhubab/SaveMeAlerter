@@ -27,11 +27,18 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountBox
+import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -59,6 +66,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
 import androidx.navigation.compose.rememberNavController
+import com.google.firebase.auth.ktx.auth
+import com.google.firebase.ktx.Firebase
 import com.gray.vulf.savemealerter.R
 import com.gray.vulf.savemealerter.SpeechRecognitionService
 import com.gray.vulf.savemealerter.TAG
@@ -81,9 +90,13 @@ fun getSaveMeData(context: Context): SaveMeData {
 
 
 @OptIn(ExperimentalMaterial3Api::class)
+@Preview
 @Composable
 fun Home(
-    onNavigateToContacts: () -> Unit
+    onNavigateToContacts: () -> Unit = {},
+    onNavigateToAuth: () -> Unit = {},
+    onContactsSync: () -> Unit = {},
+    syncingContacts: Boolean,
 ) {
     val navController = rememberNavController()
     val context = LocalContext.current
@@ -91,6 +104,10 @@ fun Home(
     val saveMeData = getSaveMeData(context)
 
     val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+
+    var openProfileDialog by remember {
+        mutableStateOf(false)
+    }
 
     var isRecognitionRunning by remember {
         mutableStateOf(false)
@@ -157,10 +174,33 @@ fun Home(
         isRecognitionRunning = (true)
     }
 
-    Scaffold() { padding ->
+    Scaffold { padding ->
+        when {
+            openProfileDialog -> {
+                ProfileDialog(
+                    onDismissRequest = {
+                        openProfileDialog = false
+                    },
+                    onLoginRequest = {
+                        onNavigateToAuth()
+                    },
+                    userEmail = Firebase.auth.currentUser?.email,
+                    onLogoutRequest = {
+                        Firebase.auth.signOut()
+                        openProfileDialog = false
+                    },
+                    onSyncDataRequest = {
+                        onContactsSync()
+                    },
+                    syncingContacts = syncingContacts
+                )
+            }
+        }
+
         Box(
             modifier = Modifier
-                .background(color = MaterialTheme.colorScheme.secondary)
+                .background(color = MaterialTheme.colorScheme.background),
+            contentAlignment = Alignment.TopEnd
         ) {
             Image(
                 painter = painterResource(id = R.drawable.slackedlinesback),
@@ -172,18 +212,44 @@ fun Home(
                     .fillMaxHeight(),
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
-                Column {
-                    Spacer(Modifier.size(32.dp))
+                Column(Modifier.padding(horizontal = 32.dp)) {
+                    Row(
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 24.dp, bottom = 16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = "HI!",
+                            style = MaterialTheme.typography.headlineLarge,
+                            color = MaterialTheme.colorScheme.onBackground
+                        )
+                        IconButton(
+                            onClick = {
+                                openProfileDialog = true
+                            }, modifier = Modifier
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.AccountCircle,
+                                contentDescription = "profile",
+                                modifier = Modifier.size(64.dp),
+                                tint = MaterialTheme.colorScheme.onBackground
+                            )
+                        }
+
+                    }
+
                     Text(
-                        text = "HI!",
-                        style = MaterialTheme.typography.headlineLarge,
-                        modifier = Modifier.padding(start = 20.dp, top = 20.dp),
-                        color = MaterialTheme.colorScheme.onSecondary
+                        text = "When in danger shout 'Save Me'",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onBackground,
+                        modifier = Modifier.padding(top = 12.dp, bottom = 8.dp)
                     )
                     MyTextField(
                         modifier = Modifier
                             .height(200.dp)
-                            .padding(start = 20.dp, end = 20.dp, top = 15.dp),
+                            .padding(top = 15.dp),
 
                         label = "Message you want to send!",
                         text = message,
@@ -194,18 +260,11 @@ fun Home(
                         }
                     )
 
-                    Text(
-                        text = "When in danger shout 'Save Me'",
-                        style = MaterialTheme.typography.headlineSmall,
-                        color = MaterialTheme.colorScheme.onSecondary,
-                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 15.dp)
-
-                    )
                     StartButton(
                         name = if (isRecognitionRunning) "Listening, click to stop" else "Start Listening",
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 40.dp, horizontal = 20.dp),
+                            .padding(vertical = 40.dp),
                         backgroundColor = if (isRecognitionRunning) Color.Green else MaterialTheme.colorScheme.primary,
                         icon = R.drawable.ic_mic,
                         onClick = fun() {
@@ -214,43 +273,22 @@ fun Home(
                         }
                     )
                 }
-                Column(
-                    verticalArrangement = Arrangement.Bottom,
-                    modifier = Modifier.background(
-                        color = MaterialTheme.colorScheme.surface,
-                        shape = RoundedCornerShape(
-                            topStart = 28.0.dp,
-                            topEnd = 28.0.dp,
-                            bottomEnd = 0.0.dp,
-                            bottomStart = 0.0.dp
-                        )
-                    ),
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 32.dp),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = "View and Add Contacts",
-                        style = MaterialTheme.typography.headlineSmall,
-                        modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 24.dp)
-                    )
-                    Text(
-                        text = "Add SMS contacts and emails to send emergency message to.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp)
-
-                    )
-                    Spacer(modifier = Modifier.size(24.dp))
-                    StartButton(
-                        name = "View Contacts",
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(20.dp),
-                        backgroundColor = MaterialTheme.colorScheme.secondary,
-                        onClick = fun() {
+                    ExtendedFloatingActionButton(
+                        text = { Text("Contacts") },
+                        icon = { Icon(Icons.Filled.AccountBox, contentDescription = "") },
+                        onClick = {
                             onNavigateToContacts()
-                        }
+                        },
+                        shape = MaterialTheme.shapes.small,
+                        modifier = Modifier.fillMaxWidth(0.4f)
                     )
-
                 }
-
 
             }
         }
@@ -348,70 +386,6 @@ fun Form() {
     }
 }
 
-
-@Composable
-fun StartButton(
-    name: String,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit,
-    icon: Int? = null,
-    backgroundColor: Color
-) {
-    Button(
-        onClick = { onClick() },
-        modifier = modifier,
-        shape = MaterialTheme.shapes.small,
-
-        colors = ButtonDefaults.buttonColors(containerColor = backgroundColor)
-    ) {
-
-        Row(
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text(name)
-            if (icon != null)
-                Icon(
-                    painter = painterResource(icon),
-                    contentDescription = "Mic",
-                    modifier = Modifier.scale(0.8f)
-                )
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-//@Preview(showBackground = true)
-@Composable
-fun MyTextField(
-    modifier: Modifier = Modifier,
-    label: String = "Enter Text",
-    text: String,
-    shape: Shape = MaterialTheme.shapes.large,
-    onTextChange: (text: String) -> Unit
-) {
-
-    TextField(
-        value = text,
-        onValueChange = { onTextChange(it) },
-        label = { Text(label) },
-        maxLines = 5,
-        shape = shape,
-        colors = TextFieldDefaults.textFieldColors(
-            focusedIndicatorColor = Color.Transparent,
-            unfocusedIndicatorColor = Color.Transparent,
-            disabledIndicatorColor = Color.Transparent
-        ),
-        textStyle = TextStyle(color = Color.Blue, fontWeight = FontWeight.Bold),
-        modifier = Modifier
-            .fillMaxWidth()
-
-            .then(modifier),
-
-
-        )
-}
 
 @Preview(showBackground = true)
 @Composable

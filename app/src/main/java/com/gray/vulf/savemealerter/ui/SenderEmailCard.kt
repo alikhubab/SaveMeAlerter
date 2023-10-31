@@ -25,7 +25,7 @@ fun SenderEmailCard(email: String, onEdit: () -> Unit) {
             .fillMaxWidth()
             .padding(horizontal = 32.dp, vertical = 8.dp)
             .background(
-                color = MaterialTheme.colorScheme.surfaceDim,
+                color = MaterialTheme.colorScheme.surfaceContainerLow,
                 shape = MaterialTheme.shapes.small
             ),
         horizontalArrangement = Arrangement.SpaceBetween,

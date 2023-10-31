@@ -46,7 +46,8 @@ fun EmailInputForm(onSubmit: (email: String, name: String) -> Unit = { e, n -> }
         )
         Spacer(Modifier.size(8.dp))
         MyTextField(text = name, label = "Enter Name", onTextChange = { name = it })
-        Spacer(Modifier.size(12.dp))
+        Spacer(Modifier.size(24.dp))
+
         StartButton(
             name = "Save",
             onClick = {
@@ -54,5 +55,7 @@ fun EmailInputForm(onSubmit: (email: String, name: String) -> Unit = { e, n -> }
             },
             backgroundColor = MaterialTheme.colorScheme.primary
         )
+        Spacer(Modifier.size(48.dp))
+
     }
 }

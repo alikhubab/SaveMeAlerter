@@ -26,12 +26,12 @@ fun ContactItem(name: String = "", phone: String = "", id: Number, onPress: (id:
     Row(
         modifier = Modifier
             .background(
-                color = MaterialTheme.colorScheme.surfaceVariant,
+                color = MaterialTheme.colorScheme.surfaceContainer,
                 shape = MaterialTheme.shapes.medium
             )
+            .clickable { onPress(id) }
             .padding(12.dp)
-            .fillMaxWidth()
-            .clickable { onPress(id) },
+            .fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
 
         ) {

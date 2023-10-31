@@ -5,6 +5,6 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class PhoneContact(
-    val name: String,
-    val phone: String
+    val name: String = "",
+    val phone: String = ""
 )

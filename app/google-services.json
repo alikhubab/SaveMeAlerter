@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "586790472823",
+    "project_id": "save-me-alerter",
+    "storage_bucket": "save-me-alerter.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:586790472823:android:ac666faaf606ae4f5a4a72",
+        "android_client_info": {
+          "package_name": "com.gray.vulf.savemealerter"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDx5vi83sqNF2zPSNDnT9zez0rqiuDt_DY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

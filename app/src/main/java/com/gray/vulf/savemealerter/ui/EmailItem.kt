@@ -26,7 +26,7 @@ fun EmailItem(name: String = "", email: String = "", id: Number, onPress: (id: N
     Row(
         modifier = Modifier
             .background(
-                color = MaterialTheme.colorScheme.surfaceVariant,
+                color = MaterialTheme.colorScheme.surfaceContainer,
                 shape = MaterialTheme.shapes.medium
             )
             .clickable {

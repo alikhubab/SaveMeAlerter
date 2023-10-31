@@ -73,7 +73,9 @@ fun SmsContacts() {
     var openDeleteAlertDialog = remember {
         mutableStateOf(false)
     }
-
+    var itemIdToBeDeleted by remember {
+        mutableStateOf(0)
+    }
     val sharedPreferences = context.getSharedPreferences("SmaPrefs", Context.MODE_PRIVATE)
 
 
@@ -175,6 +177,11 @@ fun SmsContacts() {
         contactsLauncher.launch()
     }
 
+    fun handleContactRemove(index: Int) {
+        contacts.removeAt(index)
+        saveContactListToSharedPrefs(contacts)
+    }
+
     Scaffold(
         floatingActionButton = {
             ExtendedFloatingActionButton(
@@ -202,6 +209,7 @@ fun SmsContacts() {
                         openDeleteAlertDialog.value = false
                     },
                     onConfirmation = {
+                        handleContactRemove(itemIdToBeDeleted)
                         openDeleteAlertDialog.value = false
                     }
                 )
@@ -211,11 +219,12 @@ fun SmsContacts() {
             modifier = Modifier
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background)
-                .padding(16.dp)
+                .padding(32.dp)
 
         ) {
             itemsIndexed(contacts) { index, item ->
                 ContactItem(name = item.name, phone = item.phone, id = index) {
+                    itemIdToBeDeleted = index
                     openDeleteAlertDialog.value = true
                 }
                 Spacer(
@@ -230,7 +239,121 @@ fun SmsContacts() {
 }
 
 
-
-
-
+/**
+ * Integrate Firebase
+ * Implement Authentication
+ * If User Logged In:
+ *      Button to sync
+ * On Sync:
+ *      Load Contacts from DB
+ *      Take contacts from local
+ *      Merge the two
+ *      Update Contact Locally
+ *      Update Contacts on DB
+ *
+ *On Contact Add:
+ *      Add Local
+ *      Add to DB
+ *
+ *                0.00000654
+ *                _______
+ *      10000000 / 65400000         Sab sy pehly oopar point daleing gy kiun ky andar choti value ha
+ *                 60000000
+ *                 ---------
+ *                  54000000
+ *                  50000000
+ *                  --------
+ *                   40000000
+ *                   40000000
+ *                   --------
+ *                   00000000
+ *
+ *
+ *
+ *
+ *
+ *                __________
+ *      10000000 / 654
+ *
+ *      -> 1) oopar point dalein gey kiunky andar chauti value ha --> point ki wja sy neechy 1 zero lag jae ga
+ *
+ *                0.
+ *                __________
+ *      10000000 / 6540
+ *
+ *
+ *      -> 2) 6540 aur 10000000 ky digits ko barabar karna ha taky
+ *  *         divide ho sky. usky lie 654 ky baad 0000 (5-zeroes) lgaen
+ *  *         gy. 10000000 ky 8 digits hn. 6540 mn 4 hn. 4 zeroes lgaen
+ *  *         gy tu is mn bhi 8 ho jaen gy.  65400000.
+ *
+ *                 0.
+ *                __________
+ *      10000000 / 65400000
+ *
+ *
+ *      -> 3) Itny hi zeroes jitny andar add kie hn oopar bhi lgaen gy
+ *                 0.0000
+ *                __________
+ *      10000000 / 65400000
+ *
+ *
+ *      4 -> Phir 65400000 ko 10000000 sy devide kren gy bach jea ga 5400000
+ *          Isky lie 10000000 ko 6 sy multiply kren gy
+ *
+ *                   0.000006
+ *                  __________
+ *        10000000 / 65400000
+ *                   60000000
+ *                   --------
+ *                    5400000
+ *       5 --> Phir khud sy 1 zero lga lein gy kiunky 10000000 5400000 sy ek digit barra ha
+ *
+ *                   0.000006
+ *                  __________
+ *        10000000 / 65400000
+ *                   60000000
+ *                   --------
+ *                    54000000
+ *        6 --> Phir 10000000 ko 5 sy multiply krein gy ae ga 60000000 bachy ga 4000000
+ *
+ *                   0.0000065
+ *                  __________
+ *        10000000 / 65400000
+ *                   60000000
+ *                   --------
+ *                    54000000
+ *                    50000000
+ *                    --------
+ *                     4000000
+ *
+ *       7 --> Phir khud sy 1 zero lga lein gy kiunky 10000000 4000000 sy ek digit barra ha
+ *
+ *                   0.0000065
+ *                  __________
+ *        10000000 / 65400000
+ *                   60000000
+ *                   --------
+ *                    54000000
+ *                    50000000
+ *                    --------
+ *                     40000000
+ *
+ *      8 --> Phir 10000000 ko 4 sy multiply krein gy ae ga 40000000 bachy ga 0000000
+ *
+ *                  0.00000654
+ *                  __________
+ *        10000000 / 65400000
+ *                   60000000
+ *                   --------
+ *                    54000000
+ *                    50000000
+ *                    --------
+ *                     40000000
+ *                     40000000
+ *                     ---------
+ *                     00000000
+ *
+ *       9 --> answer = 0.00000654
+ */
 

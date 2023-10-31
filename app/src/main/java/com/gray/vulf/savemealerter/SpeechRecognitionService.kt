@@ -59,7 +59,8 @@ import javax.mail.internet.InternetAddress
 import javax.mail.internet.MimeMessage
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
-
+import com.gray.vulf.savemealerter.utility.getContactsListFromStorage
+import kotlinx.coroutines.tasks.await
 
 const val TAG = "SpeechRecognitionService";
 
@@ -98,13 +99,23 @@ class SpeechRecognitionService : Service() {
             mimeMessage.setText(message)
 
             GlobalScope.launch(Dispatchers.IO) {
-                Transport.send(mimeMessage)
+                try {
+                    Log.d(TAG, "Sending Email to>>" + recipientAddresses.toString())
+
+                    Transport.send(mimeMessage)
+                    Log.i(TAG, "Email Send Successfully")
+                } catch (e: Exception) {
+                    Log.e(TAG, "user password invalid")
+                }
+
+
 //                showNotification("Save Me Email sent", "Save Me Email sent to $targetEmail")
             }
-            Log.i(TAG, "Email Send Successfully")
         } catch (e: MessagingException) {
             Log.e(TAG, "Error Sending Email ${e.message}")
             e.printStackTrace()
+        } catch (e: Exception) {
+            Log.e(TAG, "user password invalid")
         }
     }
 
@@ -117,6 +128,7 @@ class SpeechRecognitionService : Service() {
             targetPhones.map {
                 if (it.phone.isBlank()) return
                 smsManager.sendTextMessage(it.phone, null, message, null, null)
+                Log.d(TAG, "Message Sent To >>>>>>>>" + it.phone)
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error sending message>> $e")
@@ -166,8 +178,10 @@ class SpeechRecognitionService : Service() {
             if (location != null)
                 address = getAddress(location.latitude, location.longitude)
             Log.i("askForHelp>>address>>", address)
+            val mapLink =
+                if (location != null) "https://maps.google.com/?q=${location.latitude},${location.longitude}" else "Not Available"
             val msg =
-                "${message.message} \n Address: ${address} \n Coordinates: ${location?.latitude} , ${location?.longitude}"
+                "${message.message} \n Address: ${address} \n Open on map: $mapLink"
             sendMessage(message.phoneTargets, msg)
             Log.e("Mesage is>>>>>>>>>>>>>>>>>", msg)
             sendMail(message.mailTargets, message.sender, msg)
@@ -201,7 +215,13 @@ class SpeechRecognitionService : Service() {
                         override fun isCancellationRequested() = false
                     }
                 ).addOnSuccessListener {
-                    continuation.resume(it)
+                    if (it == null) {
+                        val lastLocation = fusedLocationClient.lastLocation.addOnSuccessListener {
+                            continuation.resume(it)
+                        }
+                    } else {
+                        continuation.resume(it)
+                    }
                 }
             } else {
                 continuation.resume(null)
@@ -210,22 +230,8 @@ class SpeechRecognitionService : Service() {
     }
 
 
-    private inline fun <reified K> getContactsListFromStorage(contactType: String): List<K> {
-        val sharedPreferences = getSharedPreferences("SmaPrefs", Context.MODE_PRIVATE)
-        val contacts: List<K>
-        val jsonContacts = sharedPreferences.getString(contactType, "");
-
-        contacts = if (jsonContacts.isNullOrBlank()) {
-            listOf()
-        } else {
-            Json.decodeFromString<List<K>>(jsonContacts)
-        }
-        return contacts
-    }
-
-
     private inline fun <reified K> getContactFromStorage(contactType: String): K? {
-        val sharedPreferences = getSharedPreferences("SmaPrefs", Context.MODE_PRIVATE)
+        val sharedPreferences = getSharedPreferences("SmaPrefs", MODE_PRIVATE)
         val contact: K?
         val jsonContact = sharedPreferences.getString(contactType, "")
         contact = if (jsonContact.isNullOrBlank()) {
@@ -237,7 +243,7 @@ class SpeechRecognitionService : Service() {
     }
 
     private fun getMessageFromStorage(): String {
-        val sharedPreferences = getSharedPreferences("message", Context.MODE_PRIVATE)
+        val sharedPreferences = getSharedPreferences("message", MODE_PRIVATE)
         return sharedPreferences.getString("message", "").let {
             if (it.isNullOrBlank())
                 return@let "Save Me"
@@ -246,12 +252,17 @@ class SpeechRecognitionService : Service() {
     }
 
     private fun getSaveMeMessage(): SaveMeMessage {
-        val phoneContacts = getContactsListFromStorage<PhoneContact>("smsContacts")
-        val emailContacts = getContactsListFromStorage<EmailContact>("emailContacts")
+        val sharedPrefs = getSharedPreferences("SmaPrefs", Context.MODE_PRIVATE)
+        val phoneContacts = getContactsListFromStorage<PhoneContact>("smsContacts", sharedPrefs)
+        val emailContacts = getContactsListFromStorage<EmailContact>("emailContacts", sharedPrefs)
+
         val senderEmailPassword =
             getContactFromStorage<EmailPassword>("senderEmailPassword").let {
                 if (it == null)
-                    return@let EmailPassword(email = "alikhubab6@gmail.com", password = "123")
+                    return@let EmailPassword(
+                        email = "alikhubab6@gmail.com",
+                        password = "okhwkeckgfdpuunk"
+                    )
                 it
             }
         val message = getMessageFromStorage()
@@ -418,7 +429,7 @@ class SpeechRecognitionService : Service() {
             .build()
 
         val notificationManager =
-            getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         notificationManager.notify(12, notification)
     }
 
@@ -430,7 +441,7 @@ class SpeechRecognitionService : Service() {
         )
         chan.lightColor = 0x452312
         chan.lockscreenVisibility = Notification.VISIBILITY_PRIVATE
-        val service = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val service = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         service.createNotificationChannel(chan)
         return channelId
     }

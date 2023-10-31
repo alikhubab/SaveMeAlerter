@@ -65,7 +65,7 @@ import javax.mail.AuthenticationFailedException
 import javax.mail.Authenticator
 import javax.mail.PasswordAuthentication
 import javax.mail.Session
-
+import com.gray.vulf.savemealerter.utility.isValidEmail
 
 fun authenticateEmail(email: String, password: String): Boolean {
     try {
@@ -104,6 +104,9 @@ fun EmailContacts() {
     var openDeleteAlertDialog = remember {
         mutableStateOf(false)
     }
+    var itemIdToBeDeleted by remember {
+        mutableStateOf(0)
+    }
 
     val senderEmailInputSheetState = rememberModalBottomSheetState()
     var showSenderEmailInputBottomSheet by remember {
@@ -135,7 +138,7 @@ fun EmailContacts() {
         val ep: EmailPassword
         val jsonEp = sharedPreferences.getString("senderEmailPassword", "")
         ep = if (jsonEp.isNullOrBlank()) {
-            EmailPassword(email = "alikhubab6@gmail.com", password = "123")
+            EmailPassword(email = "alikhubab6@gmail.com", password = "okhwkeckgfdpuunk")
         } else {
             Json.decodeFromString<EmailPassword>(jsonEp)
         }
@@ -161,6 +164,12 @@ fun EmailContacts() {
         emailContacts = (emailContacts + EmailContact(name.trim(), email.trim())).toMutableList()
         saveContactListToSharedPrefs(emailContacts)
     }
+
+    fun handleRemoveEmail(index: Int) {
+        emailContacts.removeAt(index)
+        saveContactListToSharedPrefs(emailContacts)
+    }
+
 
     fun handleUpdateSenderEmail(email: String, password: String) {
         senderEmailPassword = EmailPassword(email, password)
@@ -192,8 +201,9 @@ fun EmailContacts() {
                         openDeleteAlertDialog.value = false
                     },
                     onConfirmation = {
+                        handleRemoveEmail(itemIdToBeDeleted)
                         openDeleteAlertDialog.value = false
-                    }
+                    },
                 )
             }
         }
@@ -208,10 +218,10 @@ fun EmailContacts() {
                     .background(MaterialTheme.colorScheme.background)
                     .padding(32.dp)
 
-
             ) {
                 itemsIndexed(emailContacts) { index, item ->
                     EmailItem(name = item.name, email = item.email, id = index) {
+                        itemIdToBeDeleted = index
                         openDeleteAlertDialog.value = true
                     }
                     Spacer(modifier = Modifier.size(8.dp))
@@ -296,10 +306,6 @@ fun EmailContacts() {
 }
 
 
-fun isValidEmail(email: String): Boolean {
-    val emailRegex = Regex("^[A-Za-z0-9+_.-]+@(.+)$")
-    return emailRegex.matches(email)
-}
 
 
 
